@@ -8,6 +8,7 @@ src/main.d: ../src/main.c \
  /Users/Wenhao/Documents/LPCXpresso_6.1.4/workspace/Lib_MCU/inc/lpc17xx_i2c.h \
  /Users/Wenhao/Documents/LPCXpresso_6.1.4/workspace/Lib_MCU/inc/lpc17xx_ssp.h \
  /Users/Wenhao/Documents/LPCXpresso_6.1.4/workspace/Lib_MCU/inc/lpc17xx_timer.h \
+ /Users/Wenhao/Documents/LPCXpresso_6.1.4/workspace/Lib_MCU/inc/lpc17xx_uart.h \
  /Users/Wenhao/Documents/LPCXpresso_6.1.4/workspace/Lib_EaBaseBoard/inc/joystick.h \
  /Users/Wenhao/Documents/LPCXpresso_6.1.4/workspace/Lib_EaBaseBoard/inc/pca9532.h \
  /Users/Wenhao/Documents/LPCXpresso_6.1.4/workspace/Lib_EaBaseBoard/inc/acc.h \
@@ -15,7 +16,8 @@ src/main.d: ../src/main.c \
  /Users/Wenhao/Documents/LPCXpresso_6.1.4/workspace/Lib_EaBaseBoard/inc/rgb.h \
  /Users/Wenhao/Documents/LPCXpresso_6.1.4/workspace/Lib_EaBaseBoard/inc/led7seg.h \
  /Users/Wenhao/Documents/LPCXpresso_6.1.4/workspace/Lib_EaBaseBoard/inc/light.h \
- /Users/Wenhao/Documents/LPCXpresso_6.1.4/workspace/Lib_EaBaseBoard/inc/temp.h
+ /Users/Wenhao/Documents/LPCXpresso_6.1.4/workspace/Lib_EaBaseBoard/inc/temp.h \
+ ../src/main.h
 
 /Users/Wenhao/Documents/LPCXpresso_6.1.4/workspace/Lib_MCU/inc/lpc17xx_pinsel.h:
 
@@ -35,6 +37,8 @@ src/main.d: ../src/main.c \
 
 /Users/Wenhao/Documents/LPCXpresso_6.1.4/workspace/Lib_MCU/inc/lpc17xx_timer.h:
 
+/Users/Wenhao/Documents/LPCXpresso_6.1.4/workspace/Lib_MCU/inc/lpc17xx_uart.h:
+
 /Users/Wenhao/Documents/LPCXpresso_6.1.4/workspace/Lib_EaBaseBoard/inc/joystick.h:
 
 /Users/Wenhao/Documents/LPCXpresso_6.1.4/workspace/Lib_EaBaseBoard/inc/pca9532.h:
@@ -50,3 +54,5 @@ src/main.d: ../src/main.c \
 /Users/Wenhao/Documents/LPCXpresso_6.1.4/workspace/Lib_EaBaseBoard/inc/light.h:
 
 /Users/Wenhao/Documents/LPCXpresso_6.1.4/workspace/Lib_EaBaseBoard/inc/temp.h:
+
+../src/main.h:
