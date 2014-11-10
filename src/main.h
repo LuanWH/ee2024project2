@@ -59,6 +59,7 @@ static uint32_t notes[] = {
 void initializeAll(void);
 void checkAndUpdateAll(void);
 void updateCondition(void);
+void checkAndReport(void);
 
 /** Mode Control**/
 void changeToRelay(void);
@@ -114,7 +115,8 @@ static void init_SW3(void);
 /** UART Control **/
 void pinsel_uart3(void);
 void init_uart(void);
-
+void report(void);
+void reportRelay(void);
 
 /** SysTick Control **/
 void SysTick_Handler(void);

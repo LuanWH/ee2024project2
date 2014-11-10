@@ -41,6 +41,7 @@ volatile uint32_t count2000 = 0;
 volatile uint32_t count3000 = 0;
 volatile uint32_t count100 = 0;
 volatile uint8_t count50 = 0;
+volatile uint32_t count5000 = 0;
 int segDisplayNumber = 0;
 clock_t lastTime;
 clock_t thisTime;
@@ -400,6 +401,7 @@ void SysTick_Handler(void){
 	count3000++;
 	count100++;
 	count50++;
+	count5000++;
 }
 
 uint32_t getTicks(void){
@@ -641,6 +643,24 @@ void initializeAll(void){
     rgb_init();
 }
 
+void report(void){
+	//TODO:get it work
+}
+void reportRelay(void){
+	//TODO:get it work
+}
+
+void checkAndReport(void){
+	if(count5000 >= 5000 || count5000 == 0){
+		count5000 = 0;
+		if(mode == REGULAR){
+			report();
+		} else {
+			reportRelay();
+		}
+	}
+}
+
 int main (void) {
 
 	/* ---> SYSTEM CONFIG <---*/
@@ -657,7 +677,8 @@ int main (void) {
     while (1)
     {
     	checkAndUpdateAll();
-    	Timer0_Wait(5);
+    	checkAndReport();
+    	Timer0_Wait(2);
     }
 
 
