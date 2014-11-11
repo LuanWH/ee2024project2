@@ -64,11 +64,10 @@ int lastVariance = 0;
 int queuePosition = 0;
 int queue[N_SAMPLE];
 
-
 uint8_t data = 0;
 uint32_t len = 0;
 uint8_t line[64];
-static char * msg = NULL;
+static char * msgFormat[100] = "#N091_T%02.1f_L%03u_V%03d#\r";
 
 void toggleRgb(void){
 	if(isRgbOn){
@@ -644,7 +643,10 @@ void initializeAll(void){
 }
 
 void report(void){
-	//TODO:get it work
+	char myMsg[24];
+	float ptemp = lastTemp/10.0;
+	sprintf(myMsg, msgFormat, ptemp, lastLight, lastVariance);
+	UART_Send(LPC_UART3, &myMsg, 23, BLOCKING);
 }
 void reportRelay(void){
 	//TODO:get it work
