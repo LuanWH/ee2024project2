@@ -29,13 +29,20 @@
 
 #include "main.h"
 
+#define BUFFER_SIZE 200
+#define REPORT_TIME 1000
+
+char buffer[BUFFER_SIZE];
+int isRecMsgReadyToPrint = 0;
+int bufferPtr = 0;
+char relayMsg[100];
+
 Mode mode = REGULAR;
 Condition condition = DIM;
 Condition lastCondition = DIM;
 volatile static uint32_t msTicks = 0;
 volatile static uint32_t msCount = 0;
 
-static uint8_t barPos = 2;
 volatile uint32_t count1000 = 0;
 volatile uint32_t count2000 = 0;
 volatile uint32_t count3000 = 0;
@@ -67,7 +74,11 @@ int queue[N_SAMPLE];
 uint8_t data = 0;
 uint32_t len = 0;
 uint8_t line[64];
-static char msgFormat[100] = "#N091_T%02.1f_L%03u_V%03d#\r";
+static char msgFormat[100] = "#N091_T%02.1f_L%03u_V%03d#\r\0";
+static char relayMsgFormat[100] = "#N091_T%02.1f_L%03u_V%03d_%s#\r\0";
+char myMsg[100];
+char relayMsg[100];
+
 
 void toggleRgb(void){
 	if(isRgbOn){
@@ -182,98 +193,6 @@ void updateOled(){
 		oled_putString(1, 45, (unsigned char *) "Cdtn: N.A.", OLED_COLOR_WHITE, OLED_COLOR_BLACK);
 	}
 
-}
-
-static void moveBar(uint8_t steps, uint8_t dir)
-{
-    uint16_t ledOn = 0;
-
-    if (barPos == 0)
-        ledOn = (1 << 0) | (3 << 14);
-    else if (barPos == 1)
-        ledOn = (3 << 0) | (1 << 15);
-    else
-        ledOn = 0x07 << (barPos-2);
-
-    barPos += (dir*steps);
-    barPos = (barPos % 16);
-
-    pca9532_setLeds(ledOn, 0xffff);
-}
-
-static void playNote(uint32_t note, uint32_t durationMs) {
-
-    uint32_t t = 0;
-
-    if (note > 0) {
-
-        while (t < (durationMs*1000)) {
-            NOTE_PIN_HIGH();
-            Timer0_us_Wait(note / 2);
-            //delay32Us(0, note / 2);
-
-            NOTE_PIN_LOW();
-            Timer0_us_Wait(note / 2);
-            //delay32Us(0, note / 2);
-
-            t += note;
-        }
-
-    }
-    else {
-    	Timer0_Wait(durationMs);
-        //delay32Ms(0, durationMs);
-    }
-}
-
-static uint32_t getNote(uint8_t ch)
-{
-    if (ch >= 'A' && ch <= 'G')
-        return notes[ch - 'A'];
-
-    if (ch >= 'a' && ch <= 'g')
-        return notes[ch - 'a' + 7];
-
-    return 0;
-}
-
-static uint32_t getDuration(uint8_t ch)
-{
-    if (ch < '0' || ch > '9')
-        return 400;
-
-    /* number of ms */
-
-    return (ch - '0') * 200;
-}
-
-
-static void playSong(uint8_t *song) {
-    uint32_t note = 0;
-    uint32_t dur  = 0;
-    uint32_t pause = 0;
-
-    /*
-     * A song is a collection of tones where each tone is
-     * a note, duration and pause, e.g.
-     *
-     * "E2,F4,"
-     */
-
-    while(*song != '\0') {
-        note = getNote(*song++);
-        if (*song == '\0')
-            break;
-        dur  = getDuration(*song++);
-        if (*song == '\0')
-            break;
-        pause = getPause(*song++);
-
-        playNote(note, dur);
-        //delay32Ms(0, pause);
-        Timer0_Wait(pause);
-
-    }
 }
 
 static void init_ssp(void)
@@ -396,11 +315,36 @@ void SysTick_Handler(void){
 	msTicks++;
 	msCount++;
 	count1000++;
-	count2000++;
+	//count2000++;
 	count3000++;
-	count100++;
-	count50++;
+	//count100++;
+	//count50++;
 	count5000++;
+	if(msCount % 50 == 0){
+    	if(mode == REGULAR && condition ==BRIGHT){
+			updateAcc();
+    	}
+	}
+	if(msCount % 100 == 0){
+		if(mode == RELAY || (mode==REGULAR && condition ==DIM)){
+	        updateAcc();
+		}
+	}
+	if(msCount % 1000 == 0){
+		updateLed7Seg();
+	}
+
+	if(msCount % 2000 == 0){
+		if(mode == RELAY){
+        	if(isRgbOn){
+        		rgb_setLeds(0);
+        		isRgbOn = 0;
+        	} else {
+        		isRgbOn = 1;
+        		rgb_setLeds(RGB_RED);
+        	}
+		}
+	}
 }
 
 uint32_t getTicks(void){
@@ -475,22 +419,22 @@ void checkAndUpdateAll(void){
 //	}
 
 	/** Update Acceleration **/
-	if(count50 >= 50 || count50 ==0){
-		count50 = 0;
-    	if(mode == REGULAR && condition ==BRIGHT){
-			updateAcc();
-    	}
-	}
-	if(count100 >= 100 || count100 == 0){
-		count100 = 0;
-		if(mode == RELAY || (mode==REGULAR && condition ==DIM)){
-	        updateAcc();
-		}
-	}
+//	if(count50 >= 50 || count50 ==0){
+//		count50 = 0;
+//    	if(mode == REGULAR && condition ==BRIGHT){
+//			//updateAcc();
+//    	}
+//	}
+//	if(count100 >= 100 || count100 == 0){
+//		count100 = 0;
+//		if(mode == RELAY || (mode==REGULAR && condition ==DIM)){
+//	       // updateAcc();
+//		}
+//	}
 
 	if(count1000 >= 1000 || 1000 ==0){
 		count1000 = 0;
-		updateLed7Seg();
+		//updateLed7Seg();
     	updateOledAcc();
     	if(mode == REGULAR && condition ==BRIGHT){
     		updateLight();
@@ -503,18 +447,18 @@ void checkAndUpdateAll(void){
         	//printf("update light %d, temp %d\n", lastLight, lastTemp);
     	}
 	}
-	if(count2000>=2000 || count2000 == 0){
-		count2000 = 0;
-		if(mode == RELAY){
-        	if(isRgbOn){
-        		rgb_setLeds(0);
-        		isRgbOn = 0;
-        	} else {
-        		isRgbOn = 1;
-        		rgb_setLeds(RGB_RED);
-        	}
-		}
-	}
+//	if(count2000>=2000 || count2000 == 0){
+//		count2000 = 0;
+//		if(mode == RELAY){
+//        	if(isRgbOn){
+//        		rgb_setLeds(0);
+//        		isRgbOn = 0;
+//        	} else {
+//        		isRgbOn = 1;
+//        		rgb_setLeds(RGB_RED);
+//        	}
+//		}
+//	}
 	if(count3000 >= 3000 || count3000 == 0){
 		count3000 = 0;
 		if(mode == RELAY || (mode==REGULAR && condition ==DIM)){
@@ -544,6 +488,7 @@ void EINT0_IRQHandler(void){
 	}
 	toggleMode();
 	updateOledMode();
+	isRecMsgReadyToPrint = 0;
 	LPC_SC->EXTINT = 0b001;
 
 	//printf("Finish EINT0\n");
@@ -569,6 +514,42 @@ void EINT0_IRQHandler(void){
 //	PINSEL_ConfigPin(&PinCfg);
 //}
 
+void readFromBuffer(uint8_t recChar){
+	//char recChar;
+	//UART_Receive(LPC_UART3, &recChar, 1, BLOCKING);
+	if (recChar == '\r'){
+		if(bufferPtr == 22){
+			printf("msgready\n");
+			buffer[22] = '\0';
+			isRecMsgReadyToPrint = 1;
+			sprintf(relayMsg, "%s", buffer);
+		}
+		printf("%s\n", buffer);
+		bufferPtr = 0;
+	} else if(bufferPtr < BUFFER_SIZE){
+		printf("%c\n", recChar);
+		buffer[bufferPtr] = (char) recChar;
+		bufferPtr++;
+	}
+
+}
+
+void UART3_IRQHandler(void){
+    if(LPC_UART3->IIR & UART_IIR_INTID_THRE){
+    	while(LPC_UART3->LSR & 0x1){
+    		//readFromBuffer();
+    		readFromBuffer(LPC_UART3->RBR);
+		}
+    }
+    if(LPC_UART3->IIR & UART_IIR_INTID_RDA){
+    	while(LPC_UART3->LSR & 0x1){
+    		//readFromBuffer();
+    		readFromBuffer(LPC_UART3->RBR);
+		}
+    }
+
+}
+
 void pinsel_uart3(void){
 	PINSEL_CFG_Type PinCfg;
 	PinCfg.Funcnum = 2;
@@ -589,6 +570,15 @@ void init_uart(void){
 	//supply power & setup working par.s for uart3
 	UART_Init(LPC_UART3, &uartCfg); //enable transmit for uart3
 	UART_TxCmd(LPC_UART3, ENABLE);
+
+	LPC_UART3->FCR |= UART_FCR_TRG_LEV0;
+	LPC_UART3->IER = 0x1;
+	LPC_UART3->IER |= UART_IER_THREINT_EN;
+	UART_IntConfig(LPC_UART3, UART_INTCFG_THRE, ENABLE);
+	UART_IntConfig(LPC_UART3, UART_INTCFG_RBR, ENABLE);
+	NVIC_ClearPendingIRQ(UART3_IRQn);
+	NVIC_EnableIRQ(UART3_IRQn);
+	NVIC_SetPriority(UART3_IRQn, NVIC_EncodePriority(4,3,0));
 }
 
 void initializeAll(void){
@@ -642,24 +632,50 @@ void initializeAll(void){
     rgb_init();
 }
 
-void report(void){
-	char myMsg[24];
+void printMsg(void){
 	float ptemp = lastTemp/10.0;
-	sprintf(myMsg, msgFormat, ptemp, lastLight, lastVariance);
-	UART_Send(LPC_UART3, &myMsg, 23, BLOCKING);
+	if(ptemp >= 100){
+		ptemp = 99.9;
+	} else if(ptemp <= 0){
+		ptemp = 25.0;
+	}
+	uint32_t plight = lastLight;
+	if(plight >= 1000){
+		plight = 999;
+	}
+	int pvar = lastVariance;
+	if(pvar >= 1000){
+		pvar = 999;
+	}
+	if(mode == REGULAR || !isRecMsgReadyToPrint){
+		sprintf(myMsg, msgFormat, ptemp, plight, pvar);
+	} else{
+		 //#N091_T28.1_L009_V009#/r
+		if (relayMsg[0] == '#' &&
+				relayMsg[21] == '#' &&
+				relayMsg[1] == 'N' &&
+				relayMsg[6] == 'T' &&
+				relayMsg[9] == '.' &&
+				relayMsg[12] == 'L' &&
+				relayMsg[17] == 'V'){
+			isRecMsgReadyToPrint = 0;
+			sprintf(myMsg, relayMsgFormat, ptemp, plight, pvar, relayMsg+1);
+		} else {
+			isRecMsgReadyToPrint = 0;
+		}
+	}
+
 }
-void reportRelay(void){
-	//TODO:get it work
+
+void report(void){
+	printMsg();
+	UART_SendString(LPC_UART3, &myMsg);
 }
 
 void checkAndReport(void){
 	if(count5000 >= 5000 || count5000 == 0){
 		count5000 = 0;
-		if(mode == REGULAR){
-			report();
-		} else {
-			reportRelay();
-		}
+		report();
 	}
 }
 
