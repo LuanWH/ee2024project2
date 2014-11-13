@@ -67,7 +67,7 @@ int queue[N_SAMPLE];
 uint8_t data = 0;
 uint32_t len = 0;
 uint8_t line[64];
-static char * msgFormat[100] = "#N091_T%02.1f_L%03u_V%03d#\r";
+static char msgFormat[100] = "#N091_T%02.1f_L%03u_V%03d#\r";
 
 void toggleRgb(void){
 	if(isRgbOn){
@@ -592,7 +592,7 @@ void init_uart(void){
 }
 
 void initializeAll(void){
-	msg = "Welcome to EE2024 \r\n";
+
     init_i2c();
     init_ssp();
 
