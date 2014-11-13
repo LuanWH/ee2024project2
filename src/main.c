@@ -96,6 +96,83 @@ int isRelayMsgIconOn = 0;
 volatile int i2cLock = 0;
 volatile int spiLock = 0;
 
+int isSelectionOn = 0;
+int selectedLed = 0;
+
+uint32_t lastPressed = 0;
+
+void startBlink(void){
+	pca9532_setLeds(0, 0xffff);
+	pca9532_setBlink0Leds(1<<selectedLed);
+}
+
+void stopBlink(void){
+	pca9532_setBlink1Leds(0);
+	pca9532_setLeds(1<<selectedLed, 0xffff);
+}
+
+void toggleSelection(void){
+	isSelectionOn = isSelectionOn == 0? 1: 0;
+}
+
+void ledMoveUp(void){
+	if(selectedLed < 8){
+		selectedLed = (selectedLed + 1) % 8;
+	} else {
+		selectedLed = (selectedLed - 1) % 8 + 8;
+	}
+}
+void ledMoveDown(void){
+	if(selectedLed < 8){
+		selectedLed = (selectedLed - 1 + 8) % 8;
+	} else {
+		selectedLed = (selectedLed + 1) % 8 + 8;
+	}
+}
+void ledMoveRight(void){
+	if(selectedLed < 8){
+		selectedLed = 15 - selectedLed;
+		ledMoveUp();
+	} else {
+		selectedLed = 15 - selectedLed;
+	}
+}
+void ledMoveLeft(void){
+	if(selectedLed > 8){
+		selectedLed = 15 - selectedLed;
+		ledMoveDown();
+	} else {
+		selectedLed = 15 - selectedLed;
+	}
+}
+
+void selectIC(uint8_t state){
+	if(msTicks - lastPressed < 250){
+		return;
+	}
+	lastPressed = msTicks;
+	if((state & JOYSTICK_CENTER)!=0){
+		toggleSelection();
+	} else if(!isSelectionOn){
+		return;
+	} else if((state & JOYSTICK_UP)!=0){
+		ledMoveUp();
+	} else if((state & JOYSTICK_DOWN)!=0){
+		ledMoveDown();
+	} else if((state & JOYSTICK_LEFT)!=0){
+		ledMoveLeft();
+	} else if((state & JOYSTICK_RIGHT)!=0){
+		ledMoveRight();
+	} else {
+		return;
+	}
+	if(isSelectionOn){
+		startBlink();
+	} else {
+		stopBlink();
+	}
+}
+
 void toggleRgb(void){
 	if(isRgbOn){
 		turnOffRgb();
@@ -567,7 +644,7 @@ void checkAndUpdateAll(void){
 	}
 
 	if(isRecMsgReadyToPrint){
-		if(!isRelayMsgIconOn){
+		if(!isRelayMsgIconOn && mode == RELAY){
 			turnOnRelayMsgIcon();
 			isRelayMsgIconOn = 1;
 		}
@@ -576,6 +653,14 @@ void checkAndUpdateAll(void){
 			turnOffRelayMsgIcon();
 			isRelayMsgIconOn = 0;
 		}
+	}
+
+	uint8_t jState = joystick_read();
+	if(jState != 0){
+		while(i2cLock);
+		i2cLock = 1;
+		selectIC(jState);
+		i2cLock = 0;
 	}
 }
 
@@ -650,8 +735,13 @@ void initializeAll(void){
 
     init_i2c();
     init_ssp();
-
+    while(i2cLock);
+    i2cLock = 1;
     pca9532_init();
+	pca9532_setBlink0Period(120);
+	pca9532_setBlink0Duty(50);
+	pca9532_setLeds(1<<selectedLed, 0xffff);
+	i2cLock = 0;
     joystick_init();
     acc_init();
     oled_init();
