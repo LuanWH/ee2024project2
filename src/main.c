@@ -74,12 +74,15 @@ int queue[N_SAMPLE];
 uint8_t data = 0;
 uint32_t len = 0;
 uint8_t line[64];
-static char msgFormat[100] = "#N091_T%02.1f_L%03u_V%03d#\r\0";
-static char relayMsgFormat[100] = "#N091_T%02.1f_L%03u_V%03d_%s\r\0";
+static char msgFormat[100] = "N091_T%02.1f_L%03u_V%03d\r\0";
+static char relayMsgFormat[100] = "N091_T%02.1f_L%03u_V%03d_%s\r\0";
 char myMsg[100];
 char relayMsg[100];
 
 int toggleHighLow = 0;
+
+oled_color_t BG_COLOR = OLED_COLOR_BLACK;
+oled_color_t FT_COLOR = OLED_COLOR_WHITE;
 
 
 void toggleRgb(void){
@@ -103,11 +106,15 @@ void turnOnRgb(void){
 void changeToRelay(void){
 	mode = RELAY;
 	turnOffAlarm();
+	BG_COLOR = OLED_COLOR_WHITE;
+	FT_COLOR = OLED_COLOR_BLACK;
 }
 
 void changeToRegular(void){
 	mode = REGULAR;
 	turnOffRgb();
+	BG_COLOR = OLED_COLOR_BLACK;
+	FT_COLOR = OLED_COLOR_WHITE;
 }
 
 
@@ -117,6 +124,8 @@ void toggleMode(void){
 	} else {
 		changeToRegular();
 	}
+	updateOled();
+
 }
 
 /*
@@ -130,69 +139,69 @@ void resetAcc(void){
 }
 
 void updateOledAcc(){
-	oled_fillRect(30,1,95,11,OLED_COLOR_BLACK);
+	oled_fillRect(30,1,95,11,BG_COLOR);
 	char sAcc[50];
 	sprintf(sAcc, "%d", lastVariance);
-	oled_putString(30, 1, (unsigned char *) sAcc, OLED_COLOR_WHITE,OLED_COLOR_BLACK);
+	oled_putString(30, 1, (unsigned char *) sAcc, FT_COLOR,BG_COLOR);
 }
 void updateOledLight(){
-	oled_fillRect(40,12, 95, 22,OLED_COLOR_BLACK);
+	oled_fillRect(40,12, 95, 22,BG_COLOR);
 	char sLight[50];
 	sprintf(sLight, "%u", lastLight);
-	oled_putString(40, 12, (unsigned char *)sLight, OLED_COLOR_WHITE,OLED_COLOR_BLACK);
+	oled_putString(40, 12, (unsigned char *)sLight, FT_COLOR,BG_COLOR);
 }
 void updateOledTemp(){
-	oled_fillRect(35, 23, 95, 33, OLED_COLOR_BLACK);
+	oled_fillRect(35, 23, 95, 33, BG_COLOR);
 	char sTemp[50];
 	sprintf(sTemp, "%.1f", lastTemp/10.0);
-	oled_putString(35, 23, (unsigned char *)sTemp, OLED_COLOR_WHITE, OLED_COLOR_BLACK);
+	oled_putString(35, 23, (unsigned char *)sTemp, FT_COLOR, BG_COLOR);
 }
 
 void updateOledCondition(){
-	oled_fillRect(35, 45, 95, 55, OLED_COLOR_BLACK);
+	oled_fillRect(35, 45, 95, 55, BG_COLOR);
 	if(mode == REGULAR){
 		if(condition == BRIGHT){
-			oled_putString(35, 45, (unsigned char *) "BRIGHT", OLED_COLOR_WHITE, OLED_COLOR_BLACK);
+			oled_putString(35, 45, (unsigned char *) "BRIGHT", FT_COLOR, BG_COLOR);
 		} else {
-			oled_putString(35, 45, (unsigned char *) "DIM", OLED_COLOR_WHITE, OLED_COLOR_BLACK);
+			oled_putString(35, 45, (unsigned char *) "DIM", FT_COLOR, BG_COLOR);
 		}
 	} else {
-		oled_putString(35, 45, (unsigned char *) "N.A.", OLED_COLOR_WHITE, OLED_COLOR_BLACK);
+		oled_putString(35, 45, (unsigned char *) "N.A.", FT_COLOR, BG_COLOR);
 	}
 
 }
 
 void updateOledMode(){
-	oled_fillRect(35, 34, 95, 44, OLED_COLOR_BLACK);
+	oled_fillRect(35, 34, 95, 44, BG_COLOR);
 	if(mode == REGULAR){
-		oled_putString(35, 34, (unsigned char *)"REGULAR", OLED_COLOR_WHITE, OLED_COLOR_BLACK);
+		oled_putString(35, 34, (unsigned char *)"REGULAR", FT_COLOR, BG_COLOR);
 	} else {
-		oled_putString(35, 34, (unsigned char *) "RELAY", OLED_COLOR_WHITE, OLED_COLOR_BLACK);
+		oled_putString(35, 34, (unsigned char *) "RELAY", FT_COLOR, BG_COLOR);
 	}
 	updateOledCondition();
 }
 
 void updateOled(){
-	oled_clearScreen(OLED_COLOR_BLACK);
+	oled_clearScreen(BG_COLOR);
 	char sAcc[50];
 	sprintf(sAcc, "Var: %d", lastVariance);
-	oled_putString(1, 1, (unsigned char *) sAcc, OLED_COLOR_WHITE,OLED_COLOR_BLACK);
+	oled_putString(1, 1, (unsigned char *) sAcc, FT_COLOR,BG_COLOR);
 	char sLight[50];
 	sprintf(sLight, "Light: %u", lastLight);
-	oled_putString(1, 12, (unsigned char *)sLight, OLED_COLOR_WHITE,OLED_COLOR_BLACK);
+	oled_putString(1, 12, (unsigned char *)sLight, FT_COLOR,BG_COLOR);
 	char sTemp[50];
 	sprintf(sTemp, "Temp: %.1f", lastTemp/10.0);
-	oled_putString(1, 23, (unsigned char *)sTemp, OLED_COLOR_WHITE, OLED_COLOR_BLACK);
+	oled_putString(1, 23, (unsigned char *)sTemp, FT_COLOR, BG_COLOR);
 	if(mode == REGULAR){
-		oled_putString(1, 34, (unsigned char *)"Mode: REGULAR", OLED_COLOR_WHITE, OLED_COLOR_BLACK);
+		oled_putString(1, 34, (unsigned char *)"Mode: REGULAR", FT_COLOR, BG_COLOR);
 		if(condition == BRIGHT){
-			oled_putString(1, 45, (unsigned char *) "Cdtn: BRIGHT", OLED_COLOR_WHITE, OLED_COLOR_BLACK);
+			oled_putString(1, 45, (unsigned char *) "Cdtn: BRIGHT", FT_COLOR, BG_COLOR);
 		} else {
-			oled_putString(1, 45, (unsigned char *) "Cdtn: DIM", OLED_COLOR_WHITE, OLED_COLOR_BLACK);
+			oled_putString(1, 45, (unsigned char *) "Cdtn: DIM", FT_COLOR, BG_COLOR);
 		}
 	} else {
-		oled_putString(1, 34, (unsigned char *) "Mode: RELAY", OLED_COLOR_WHITE, OLED_COLOR_BLACK);
-		oled_putString(1, 45, (unsigned char *) "Cdtn: N.A.", OLED_COLOR_WHITE, OLED_COLOR_BLACK);
+		oled_putString(1, 34, (unsigned char *) "Mode: RELAY", FT_COLOR, BG_COLOR);
+		oled_putString(1, 45, (unsigned char *) "Cdtn: N.A.", FT_COLOR, BG_COLOR);
 	}
 
 }
@@ -347,6 +356,21 @@ void SysTick_Handler(void){
         	}
 		}
 	}
+
+    if(!((GPIO_ReadValue(1) >> 31) & 0b01)){
+    	turnOffAlarm();
+    	GPIO_ClearValue(1, 0b01 << 31);
+    }
+
+	if(isAlarmOn){
+		if(toggleHighLow){
+			NOTE_PIN_HIGH();
+			toggleHighLow = 0;
+		} else {
+			NOTE_PIN_LOW();
+			toggleHighLow = 1;
+		}
+	}
 }
 
 uint32_t getTicks(void){
@@ -355,7 +379,7 @@ uint32_t getTicks(void){
 
 void turnOnAlarm(void){
 	isAlarmOn = 1;
-	playAlarm();
+	//playAlarm();
 }
 
 void playAlarm(void){
@@ -437,8 +461,6 @@ void checkAndUpdateAll(void){
 	/** Update Alarm **/
 	if(mode == REGULAR && lastTemp >= TEMP_WARN*10 && !isAlarmOn){
 		turnOnAlarm();
-	} else {
-		turnOffAlarm();
 	}
 }
 
@@ -560,6 +582,14 @@ void initializeAll(void){
     rgb_init();
 }
 
+int testNum(char c){
+	if(c >= '0' && c <='9'){
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
 void printMsg(void){
 	float ptemp = lastTemp/10.0;
 	if(ptemp >= 100){
@@ -578,14 +608,31 @@ void printMsg(void){
 	if(mode == REGULAR || !isRecMsgReadyToPrint){
 		sprintf(myMsg, msgFormat, ptemp, plight, pvar);
 	} else{
+		//#N091_T30.4_L136_V004#
 		if (relayMsg[0] == '#' &&
 				relayMsg[21] == '#' &&
 				relayMsg[1] == 'N' &&
+				testNum(relayMsg[2]) &&
+				testNum(relayMsg[3]) &&
+				testNum(relayMsg[4]) &&
+				relayMsg[5] == '_' &&
 				relayMsg[6] == 'T' &&
+				testNum(relayMsg[7]) &&
+				testNum(relayMsg[8]) &&
 				relayMsg[9] == '.' &&
+				testNum(relayMsg[10]) &&
+				relayMsg[11] == '_' &&
 				relayMsg[12] == 'L' &&
-				relayMsg[17] == 'V'){
+				testNum(relayMsg[13]) &&
+				testNum(relayMsg[14]) &&
+				testNum(relayMsg[15]) &&
+				relayMsg[16] == '_' &&
+				relayMsg[17] == 'V' &&
+				testNum(relayMsg[18]) &&
+				testNum(relayMsg[19]) &&
+				testNum(relayMsg[20])){
 			isRecMsgReadyToPrint = 0;
+			relayMsg[21] = '\0';
 			sprintf(myMsg, relayMsgFormat, ptemp, plight, pvar, relayMsg+1);
 		} else {
 			isRecMsgReadyToPrint = 0;
