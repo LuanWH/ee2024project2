@@ -75,9 +75,11 @@ uint8_t data = 0;
 uint32_t len = 0;
 uint8_t line[64];
 static char msgFormat[100] = "#N091_T%02.1f_L%03u_V%03d#\r\0";
-static char relayMsgFormat[100] = "#N091_T%02.1f_L%03u_V%03d_%s#\r\0";
+static char relayMsgFormat[100] = "#N091_T%02.1f_L%03u_V%03d_%s\r\0";
 char myMsg[100];
 char relayMsg[100];
+
+int toggleHighLow = 0;
 
 
 void toggleRgb(void){
@@ -401,40 +403,9 @@ void updateCondition(void){
 }
 
 void checkAndUpdateAll(void){
-	/** Update Light Watchdog **/
-//	if(mode == RELAY||lastLight >= BRIGHT_CONDITION){
-//		if(!isDisableChangeMade){
-//			NVIC_DisableIRQ(EINT3_IRQn);
-//			isDisableChangeMade = 1;
-//		}
-//		isEnableChangeMade = 0;
-//	} else {
-//		condition = DIM;
-//		if(!isEnableChangeMade){
-//			LPC_GPIOINT->IO2IntClr = 1 << 5;
-//			NVIC_EnableIRQ(EINT3_IRQn);
-//			isEnableChangeMade = 1;
-//		}
-//		isDisableChangeMade = 0;
-//	}
-
-	/** Update Acceleration **/
-//	if(count50 >= 50 || count50 ==0){
-//		count50 = 0;
-//    	if(mode == REGULAR && condition ==BRIGHT){
-//			//updateAcc();
-//    	}
-//	}
-//	if(count100 >= 100 || count100 == 0){
-//		count100 = 0;
-//		if(mode == RELAY || (mode==REGULAR && condition ==DIM)){
-//	       // updateAcc();
-//		}
-//	}
 
 	if(count1000 >= 1000 || 1000 ==0){
 		count1000 = 0;
-		//updateLed7Seg();
     	updateOledAcc();
     	if(mode == REGULAR && condition ==BRIGHT){
     		updateLight();
@@ -444,21 +415,10 @@ void checkAndUpdateAll(void){
     			updateOledCondition();
     		}
     		updateTemp();
-        	//printf("update light %d, temp %d\n", lastLight, lastTemp);
+
     	}
 	}
-//	if(count2000>=2000 || count2000 == 0){
-//		count2000 = 0;
-//		if(mode == RELAY){
-//        	if(isRgbOn){
-//        		rgb_setLeds(0);
-//        		isRgbOn = 0;
-//        	} else {
-//        		isRgbOn = 1;
-//        		rgb_setLeds(RGB_RED);
-//        	}
-//		}
-//	}
+
 	if(count3000 >= 3000 || count3000 == 0){
 		count3000 = 0;
 		if(mode == RELAY || (mode==REGULAR && condition ==DIM)){
@@ -483,51 +443,22 @@ void checkAndUpdateAll(void){
 }
 
 void EINT0_IRQHandler(void){
-	if(DEBUG){
-		//printf("In SW3 triggered interrupt. EINT0.\n");
-	}
 	toggleMode();
 	updateOledMode();
 	isRecMsgReadyToPrint = 0;
 	LPC_SC->EXTINT = 0b001;
-
-	//printf("Finish EINT0\n");
 }
 
-//void EINT3_IRQHandler(void){
-//		condition = BRIGHT;
-//		LPC_GPIOINT->IO2IntClr = 1 << 5;
-//		lastLight = light_read();
-//		light_clearIrqStatus();
-//		updateOledCondition();
-//		//NVIC_DisableIRQ(EINT3_IRQn);
-//		isDisableChangeMade = 0;
-//		isEnableChangeMade = 0;
-//		printf("In EINT3_IRQHandler\n");
-//}
-
-//void init_Light_GPIO(void){
-//	PINSEL_CFG_Type PinCfg;
-//	PinCfg.Funcnum = 0;
-//	PinCfg.Pinnum = 5;
-//	PinCfg.Portnum = 2;
-//	PINSEL_ConfigPin(&PinCfg);
-//}
-
 void readFromBuffer(uint8_t recChar){
-	//char recChar;
-	//UART_Receive(LPC_UART3, &recChar, 1, BLOCKING);
+
 	if (recChar == '\r'){
 		if(bufferPtr == 22){
-			printf("msgready\n");
 			buffer[22] = '\0';
 			isRecMsgReadyToPrint = 1;
 			sprintf(relayMsg, "%s", buffer);
 		}
-		printf("%s\n", buffer);
 		bufferPtr = 0;
 	} else if(bufferPtr < BUFFER_SIZE){
-		printf("%c\n", recChar);
 		buffer[bufferPtr] = (char) recChar;
 		bufferPtr++;
 	}
@@ -537,13 +468,11 @@ void readFromBuffer(uint8_t recChar){
 void UART3_IRQHandler(void){
     if(LPC_UART3->IIR & UART_IIR_INTID_THRE){
     	while(LPC_UART3->LSR & 0x1){
-    		//readFromBuffer();
     		readFromBuffer(LPC_UART3->RBR);
 		}
     }
     if(LPC_UART3->IIR & UART_IIR_INTID_RDA){
     	while(LPC_UART3->LSR & 0x1){
-    		//readFromBuffer();
     		readFromBuffer(LPC_UART3->RBR);
 		}
     }
@@ -574,7 +503,6 @@ void init_uart(void){
 	LPC_UART3->FCR |= UART_FCR_TRG_LEV0;
 	LPC_UART3->IER = 0x1;
 	LPC_UART3->IER |= UART_IER_THREINT_EN;
-	UART_IntConfig(LPC_UART3, UART_INTCFG_THRE, ENABLE);
 	UART_IntConfig(LPC_UART3, UART_INTCFG_RBR, ENABLE);
 	NVIC_ClearPendingIRQ(UART3_IRQn);
 	NVIC_EnableIRQ(UART3_IRQn);
@@ -650,7 +578,6 @@ void printMsg(void){
 	if(mode == REGULAR || !isRecMsgReadyToPrint){
 		sprintf(myMsg, msgFormat, ptemp, plight, pvar);
 	} else{
-		 //#N091_T28.1_L009_V009#/r
 		if (relayMsg[0] == '#' &&
 				relayMsg[21] == '#' &&
 				relayMsg[1] == 'N' &&
@@ -685,12 +612,6 @@ int main (void) {
 	SysTick_Config (SystemCoreClock / 1000);
 
 	initializeAll();
-
-	//Testing
-	//while(1){
-	//	UART_Receive(LPC_UART3, &data, 1, BLOCKING); UART_Send(LPC_UART3, &data, 1, BLOCKING);
-	//}
-
 
     while (1)
     {
