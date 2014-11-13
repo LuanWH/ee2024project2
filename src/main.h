@@ -76,12 +76,15 @@ void updateLight(void);
 void updateTemp(void);
 
 /** OLED Control **/
-void updateOledAcc();
-void updateOledLight();
-void updateOledTemp();
-void updateOledMode();
-void updateOledCondition();
-void updateOled();
+void updateOledAcc(void);
+void updateOledLight(void);
+void updateOledTemp(void);
+void updateOledMode(void);
+void updateOledCondition(void);
+void updateOled(void);
+void turnOnReportIcon(void);
+void turnOnAlarmIcon(void);
+void turnOnRelayMsgIcon(void);
 
 /** Peripherals Initialization **/
 static void init_ssp(void);

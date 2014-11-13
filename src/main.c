@@ -68,6 +68,10 @@ int32_t lastTemp = 0;
 uint32_t lastLight = 0;
 int lastVariance = 0;
 
+int32_t lastLastTemp = 0;
+uint32_t lastLastLight = 0;
+int lastLastVariance = 0;
+
 int queuePosition = 0;
 int queue[N_SAMPLE];
 
@@ -78,12 +82,19 @@ static char msgFormat[100] = "N091_T%02.1f_L%03u_V%03d\r\0";
 static char relayMsgFormat[100] = "N091_T%02.1f_L%03u_V%03d_%s\r\0";
 char myMsg[100];
 char relayMsg[100];
+char alarmMsg[] = "TEMPERATURE WARNING!!!\r\0";
 
 int toggleHighLow = 0;
 
 oled_color_t BG_COLOR = OLED_COLOR_BLACK;
 oled_color_t FT_COLOR = OLED_COLOR_WHITE;
 
+int isReportIconOn = 0;
+int isAlarmIconOn = 0;
+int isRelayMsgIconOn = 0;
+
+volatile int i2cLock = 0;
+volatile int spiLock = 0;
 
 void toggleRgb(void){
 	if(isRgbOn){
@@ -125,40 +136,78 @@ void toggleMode(void){
 		changeToRegular();
 	}
 	updateOled();
-
+	if(isReportIconOn){
+		turnOnReportIcon();
+	}
+	if(isAlarmIconOn){
+		turnOnAlarmIcon();
+	}
+	if(isRelayMsgIconOn){
+		turnOnRelayMsgIcon();
+	}
 }
 
 /*
  * Assume base board in zero-g position when reading first value.
  */
 void resetAcc(void){
-    acc_read(&x, &y, &z);
-    xoff = 0-x;
-    yoff = 0-y;
-    zoff = 0-z;
+	if(!i2cLock){
+		acc_read(&x, &y, &z);
+		xoff = 0-x;
+		yoff = 0-y;
+		zoff = 0-z;
+	}
+
 }
 
 void updateOledAcc(){
-	oled_fillRect(30,1,95,11,BG_COLOR);
+	if(lastLastVariance == lastVariance){
+		return;
+	} else {
+		lastLastVariance = lastVariance;
+	}
+	while(spiLock);
+	spiLock = 1;
+	oled_fillRect(30,1,80,11,BG_COLOR);
 	char sAcc[50];
 	sprintf(sAcc, "%d", lastVariance);
 	oled_putString(30, 1, (unsigned char *) sAcc, FT_COLOR,BG_COLOR);
+	spiLock = 0;
 }
 void updateOledLight(){
-	oled_fillRect(40,12, 95, 22,BG_COLOR);
+
+	if(lastLastLight == lastLight){
+		return;
+	} else {
+		lastLastLight = lastLight;
+	}
+	while(spiLock);
+	spiLock = 1;
+	oled_fillRect(40,12, 80, 22,BG_COLOR);
 	char sLight[50];
 	sprintf(sLight, "%u", lastLight);
 	oled_putString(40, 12, (unsigned char *)sLight, FT_COLOR,BG_COLOR);
+	spiLock = 0;
 }
 void updateOledTemp(){
-	oled_fillRect(35, 23, 95, 33, BG_COLOR);
+
+	if(lastLastTemp == lastTemp){
+		return;
+	} else {
+		lastLastTemp = lastTemp;
+	}
+	while(spiLock);
+	spiLock = 1;
+	oled_fillRect(35, 23, 80, 33, BG_COLOR);
 	char sTemp[50];
 	sprintf(sTemp, "%.1f", lastTemp/10.0);
 	oled_putString(35, 23, (unsigned char *)sTemp, FT_COLOR, BG_COLOR);
+	spiLock = 0;
 }
 
 void updateOledCondition(){
-	oled_fillRect(35, 45, 95, 55, BG_COLOR);
+	spiLock = 1;
+	oled_fillRect(35, 45, 70, 55, BG_COLOR);
 	if(mode == REGULAR){
 		if(condition == BRIGHT){
 			oled_putString(35, 45, (unsigned char *) "BRIGHT", FT_COLOR, BG_COLOR);
@@ -168,10 +217,13 @@ void updateOledCondition(){
 	} else {
 		oled_putString(35, 45, (unsigned char *) "N.A.", FT_COLOR, BG_COLOR);
 	}
+	spiLock = 0;
 
 }
 
 void updateOledMode(){
+	while(spiLock) ;
+	spiLock = 1;
 	oled_fillRect(35, 34, 95, 44, BG_COLOR);
 	if(mode == REGULAR){
 		oled_putString(35, 34, (unsigned char *)"REGULAR", FT_COLOR, BG_COLOR);
@@ -179,9 +231,12 @@ void updateOledMode(){
 		oled_putString(35, 34, (unsigned char *) "RELAY", FT_COLOR, BG_COLOR);
 	}
 	updateOledCondition();
+	spiLock = 0;
 }
 
 void updateOled(){
+	while(spiLock);
+	spiLock = 1;
 	oled_clearScreen(BG_COLOR);
 	char sAcc[50];
 	sprintf(sAcc, "Var: %d", lastVariance);
@@ -203,7 +258,60 @@ void updateOled(){
 		oled_putString(1, 34, (unsigned char *) "Mode: RELAY", FT_COLOR, BG_COLOR);
 		oled_putString(1, 45, (unsigned char *) "Cdtn: N.A.", FT_COLOR, BG_COLOR);
 	}
+	spiLock = 0;
+}
 
+void turnOnReportIcon(void){
+	if(spiLock) return;
+	spiLock = 1;
+	oled_circle(87, 7, 6, FT_COLOR);
+	oled_putChar(85, 4, 'R', FT_COLOR, BG_COLOR);
+	spiLock = 0;
+}
+
+void turnOffReportIcon(void){
+	if(spiLock) return;
+	spiLock = 1;
+	oled_fillRect(80, 0, 95, 14, BG_COLOR);
+	spiLock = 0;
+}
+
+void turnOnAlarmIcon(void){
+	if(!isAlarmIconOn){
+		if(spiLock) return;
+		spiLock = 1;
+		isAlarmIconOn = 1;
+		oled_circle(87, 22, 6, FT_COLOR);
+		oled_putChar(85, 19, 'T', FT_COLOR, BG_COLOR);
+		spiLock = 0;
+	}
+}
+
+void turnOffAlarmIcon(void){
+	if(isAlarmIconOn){
+		if(spiLock) return;
+		spiLock = 1;
+		isAlarmIconOn = 0;
+		oled_fillRect(80, 15, 95, 29, BG_COLOR);
+		spiLock = 0;
+	}
+}
+
+void turnOnRelayMsgIcon(void){
+	if(spiLock) return;
+	spiLock = 1;
+	oled_fillRect(74, 47, 94, 62, BG_COLOR);
+	oled_rect(74,47,94,62,FT_COLOR);
+	oled_line(74,47,84,54,FT_COLOR);
+	oled_line(84,54,94,47,FT_COLOR);
+	spiLock = 0;
+}
+
+void turnOffRelayMsgIcon(void){
+	if(spiLock) return;
+	spiLock = 1;
+	oled_fillRect(74, 47, 94, 62, BG_COLOR);
+	spiLock = 0;
 }
 
 static void init_ssp(void)
@@ -317,7 +425,12 @@ int calculateAccVar(int8_t now){
 }
 
 void updateAcc(){
+	if(i2cLock){
+		return;
+	}
+	i2cLock = 1;
 	acc_read(&x, &y, &z);
+	i2cLock = 0;
 	z = z+zoff;
 	lastVariance = calculateAccVar(z);
 }
@@ -379,37 +492,26 @@ uint32_t getTicks(void){
 
 void turnOnAlarm(void){
 	isAlarmOn = 1;
-	//playAlarm();
-}
-
-void playAlarm(void){
-    while (isAlarmOn) {
-        if(!((GPIO_ReadValue(1) >> 31) & 0b01)){
-        	turnOffAlarm();
-        	GPIO_ClearValue(1, 0b01 << 31);
-        	break;
-        }
-        NOTE_PIN_HIGH();
-        Timer0_us_Wait(1200 / 2);
-        if(!isAlarmOn){
-        	break;
-        }
-        NOTE_PIN_LOW();
-        Timer0_us_Wait(1200 / 2);
-    }
+	turnOnAlarmIcon();
 }
 
 void turnOffAlarm(void){
 	isAlarmOn = 0;
+	turnOffAlarmIcon();
 }
 
 void updateLed7Seg(void){
+	if(spiLock) return;
+	spiLock=1;
 	segDisplayNumber = segDisplayNumber == 9 ? 0 : segDisplayNumber + 1;
 	led7seg_setChar(48 + segDisplayNumber, 0);
+	spiLock=0;
 }
 
 void updateLight(void){
+	i2cLock = 1;
 	lastLight = light_read();
+	i2cLock = 0;
 	updateOledLight();
 }
 
@@ -461,6 +563,19 @@ void checkAndUpdateAll(void){
 	/** Update Alarm **/
 	if(mode == REGULAR && lastTemp >= TEMP_WARN*10 && !isAlarmOn){
 		turnOnAlarm();
+		UART_SendString(LPC_UART3, &alarmMsg);
+	}
+
+	if(isRecMsgReadyToPrint){
+		if(!isRelayMsgIconOn){
+			turnOnRelayMsgIcon();
+			isRelayMsgIconOn = 1;
+		}
+	} else {
+		if(isRelayMsgIconOn){
+			turnOffRelayMsgIcon();
+			isRelayMsgIconOn = 0;
+		}
 	}
 }
 
@@ -551,7 +666,7 @@ void initializeAll(void){
     temp_init(&getTicks);
     led7seg_init();
     light_enable();
-    light_setRange(LIGHT_RANGE_16000);
+    light_setRange(LIGHT_RANGE_64000);
     //light_setHiThreshold(BRIGHT_CONDITION);
     resetAcc();
     lastTime = clock();
@@ -647,6 +762,18 @@ void report(void){
 }
 
 void checkAndReport(void){
+
+	if(count5000 <= 1000 || count5000 >=4000){
+		if(!isReportIconOn){
+			turnOnReportIcon();
+			isReportIconOn = 1;
+		}
+	} else {
+		if(isReportIconOn){
+			turnOffReportIcon();
+			isReportIconOn = 0;
+		}
+	}
 	if(count5000 >= 5000 || count5000 == 0){
 		count5000 = 0;
 		report();
