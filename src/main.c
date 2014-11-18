@@ -463,12 +463,6 @@ void config_EINT0(void){
 	NVIC_EnableIRQ(EINT0_IRQn); //[Enabled] Use EINT0
 }
 
-//void config_EINT3(void){
-//	GPIO_SetDir(2, 1 << 5, 0);
-//	NVIC_EnableIRQ(EINT3_IRQn);
-//	LPC_GPIOINT->IO2IntEnF |= 1 << 5;
-//}
-
 static void init_SW3(void){
 	PINSEL_CFG_Type PinCfg;
 	PinCfg.Funcnum = 1;	 //Config SW3 Push Button as EINT0 input
@@ -722,9 +716,9 @@ void init_uart(void){
 	UART_Init(LPC_UART3, &uartCfg); //enable transmit for uart3
 	UART_TxCmd(LPC_UART3, ENABLE);
 
-	LPC_UART3->FCR |= UART_FCR_TRG_LEV0;
+	//LPC_UART3->FCR |= UART_FCR_TRG_LEV0;
 	LPC_UART3->IER = 0x1;
-	LPC_UART3->IER |= UART_IER_THREINT_EN;
+	//LPC_UART3->IER |= UART_IER_THREINT_EN;
 	UART_IntConfig(LPC_UART3, UART_INTCFG_RBR, ENABLE);
 	NVIC_ClearPendingIRQ(UART3_IRQn);
 	NVIC_EnableIRQ(UART3_IRQn);
@@ -885,6 +879,19 @@ int main (void) {
     }
 
 
+}
+
+void NMI_Handler(void){
+	ResetISR();
+}
+void MemManage_Handler(void){
+	ResetISR();
+}
+void BusFault_Handler(void){
+	ResetISR();
+}
+void UsageFault_Handler(void){
+	ResetISR();
 }
 
 void check_failed(uint8_t *file, uint32_t line)

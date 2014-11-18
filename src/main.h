@@ -24,7 +24,7 @@
 
 #define BRIGHT_CONDITION 800
 #define N_SAMPLE 10
-#define TEMP_WARN 31.5
+#define TEMP_WARN 26
 #define REPORTING_TIME
 #define DISTRESS_TIME
 
